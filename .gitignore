@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.backup
+.env.production
+/node_modules
+/vendor
+/.fleet
+/.idea
+/.nova
+/.vscode

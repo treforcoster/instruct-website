@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Instruct — BJJ Club Management</title>
+  <meta name="description" content="Instruct keeps your bookings, payments, and member progress in one place — so you spend more time coaching and less time chasing paperwork.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap">
+  <style>
+    html, body { margin: 0; padding: 0; background: #0A0E14; scroll-behavior: smooth; }
+    body { font-family: 'Manrope', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+    *, *::before, *::after { box-sizing: border-box; }
+    section[id] { scroll-margin-top: 80px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="image-slot.js"></script>
+
+  <script type="text/babel">
+
+    // ─── TWEAK VALUES (hardcoded to final pink/dark design) ─────────────────
+    const t = {
+      mode: 'dark',
+      accent: '#E83A69',
+      displayFont: 'Archivo',
+      density: 'regular',
+      heroEyebrow: 'Built for jiu jitsu academies',
+      heroHeadline: 'Run the academy. Stay on the mats.',
+      heroSubhead: 'Instruct keeps your bookings, payments, and member progress in one place — so you spend more time coaching and less time chasing paperwork.'
+    };
+
+    // ─── DENSITY SCALE ───────────────────────────────────────────────────────
+    const DENSITY_SCALE = { compact: 0.85, regular: 1, spacious: 1.18 };
+
+    // ─── UTILITIES ───────────────────────────────────────────────────────────
+    function hexA(hex, alpha) {
+      const h = String(hex).replace('#', '');
+      const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+      const n = parseInt(x.slice(0, 6), 16);
+      const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function readableOn(hex) {
+      const h = String(hex).replace('#', '');
+      const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+      const n = parseInt(x.slice(0, 6), 16);
+      const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      return r * 299 + g * 587 + b * 114 > 148000 ? '#0A0A0A' : '#FAFAF7';
+    }
+
+    function useIsMobile(bp = 768) {
+      const [m, setM] = React.useState(
+        typeof window !== 'undefined' ? window.innerWidth < bp : false
+      );
+      React.useEffect(() => {
+        const onR = () => setM(window.innerWidth < bp);
+        window.addEventListener('resize', onR);
+        return () => window.removeEventListener('resize', onR);
+      }, [bp]);
+      return m;
+    }
+
+    function Belt({ color, stripes = 0, height = 14, width = 110 }) {
+      return (
+        <div style={{
+          width, height, background: color, position: 'relative', borderRadius: 1,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.25)',
+        }}>
+          <div style={{
+            position: 'absolute', right: 6, top: 0, bottom: 0, width: 26,
+            background: color === '#000' ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.18)',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, padding: '0 2px',
+          }}>
+            {Array.from({ length: stripes }).map((_, i) => (
+              <div key={i} style={{ width: 2, height: '70%', background: '#fff' }} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── DIRECTION A ─────────────────────────────────────────────────────────
+    function DirectionA({ t }) {
+      const dark = t.mode === 'dark';
+      const accent = t.accent;
+      const accentInk = readableOn(accent);
+      const dens = DENSITY_SCALE[t.density] || 1;
+      const isMobile = useIsMobile(820);
+
+      const c = dark ?
+        { bg: '#0A0E14', surface: '#11161E', surface2: '#161C26', line: 'rgba(255,255,255,.09)', line2: 'rgba(255,255,255,.16)', ink: '#F5F4EE', ink2: 'rgba(245,244,238,.7)', ink3: 'rgba(245,244,238,.45)', code: '#9AA4B2' } :
+        { bg: '#F5F4EE', surface: '#FFFFFF', surface2: '#EDEBE3', line: 'rgba(10,14,20,.10)', line2: 'rgba(10,14,20,.20)', ink: '#0A0E14', ink2: 'rgba(10,14,20,.7)', ink3: 'rgba(10,14,20,.45)', code: '#3D4658' };
+
+      const display = `"${t.displayFont}", "Archivo Narrow", system-ui, sans-serif`;
+      const body = `"Manrope", system-ui, -apple-system, sans-serif`;
+      const mono = `"Geist Mono", "JetBrains Mono", ui-monospace, monospace`;
+
+      const sectionPx = isMobile ? 20 : Math.round(80 * dens);
+      const blockGap = Math.round(120 * dens);
+
+      return (
+        <div style={{
+          width: '100%', minHeight: '100%', background: c.bg, color: c.ink,
+          fontFamily: body, fontSize: 16, lineHeight: 1.5,
+          letterSpacing: -0.005
+        }}>
+          <NavA c={c} display={display} mono={mono} accent={accent} isMobile={isMobile} sectionPx={sectionPx} />
+          <HeroA t={t} c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} sectionPx={sectionPx} dens={dens} isMobile={isMobile} />
+          <FeatureMembers c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} sectionPx={sectionPx} dens={dens} isMobile={isMobile} />
+          <FeatureSchedule c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} sectionPx={sectionPx} dens={dens} isMobile={isMobile} />
+          <FeaturePayments c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} sectionPx={sectionPx} dens={dens} isMobile={isMobile} />
+          <TestimonialsA c={c} accent={accent} display={display} mono={mono} sectionPx={sectionPx} isMobile={isMobile} />
+          <PricingA c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} sectionPx={sectionPx} dens={dens} isMobile={isMobile} />
+          <CTAa c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} isMobile={isMobile} sectionPx={sectionPx} />
+          <FooterA c={c} mono={mono} display={display} isMobile={isMobile} sectionPx={sectionPx} />
+        </div>
+      );
+    }
+
+    // ─── NAV ─────────────────────────────────────────────────────────────────
+    function NavA({ c, display, mono, accent, isMobile, sectionPx }) {
+      const [open, setOpen] = React.useState(false);
+      return (
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 5, background: c.bg,
+          borderBottom: `1px solid ${c.line}`,
+          padding: isMobile ? `16px ${sectionPx}px` : '20px 64px',
+          display: 'flex', alignItems: 'center', gap: isMobile ? 16 : 48
+        }}>
+          <Wordmark accent={accent} ink={c.ink} display={display} />
+          {!isMobile &&
+            <nav style={{ display: 'flex', gap: 32, fontSize: 13, fontWeight: 500, color: c.ink2, letterSpacing: 0.01 }}>
+              <a href="#membership" style={{ color: 'inherit', textDecoration: 'none' }}>Membership</a>
+              <a href="#scheduling" style={{ color: 'inherit', textDecoration: 'none' }}>Scheduling</a>
+              <a href="#billing" style={{ color: 'inherit', textDecoration: 'none' }}>Billing</a>
+              <a href="#pricing" style={{ color: 'inherit', textDecoration: 'none' }}>Pricing</a>
+              <a href="#contact" style={{ color: 'inherit', textDecoration: 'none' }}>Contact</a>
+            </nav>
+          }
+          <div style={{ flex: 1 }} />
+          {!isMobile ?
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 13, fontWeight: 500 }}>
+              <span style={{ color: c.ink2 }}>Sign in</span>
+              <button style={{
+                background: accent, color: readableOn(accent), border: 0,
+                padding: '10px 18px', fontWeight: 600, fontSize: 13, borderRadius: 999,
+                fontFamily: 'inherit', cursor: 'pointer'
+              }}>Start free trial →</button>
+            </div> :
+            <button onClick={() => setOpen(!open)} aria-label="Menu" style={{
+              background: 'transparent', border: `1px solid ${c.line2}`, borderRadius: 999,
+              width: 40, height: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+              padding: 0, cursor: 'pointer'
+            }}>
+              <span style={{ width: 14, height: 1.5, background: c.ink }} />
+              <span style={{ width: 14, height: 1.5, background: c.ink }} />
+            </button>
+          }
+          {isMobile && open &&
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, background: c.bg,
+              borderBottom: `1px solid ${c.line}`, padding: `20px ${sectionPx}px`,
+              display: 'flex', flexDirection: 'column', gap: 16, fontSize: 16, color: c.ink2, fontWeight: 500
+            }}>
+              <a href="#membership" onClick={() => setOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Membership</a>
+              <a href="#scheduling" onClick={() => setOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Scheduling</a>
+              <a href="#billing" onClick={() => setOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Billing</a>
+              <a href="#pricing" onClick={() => setOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Pricing</a>
+              <a href="#contact" onClick={() => setOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Contact</a>
+              <span style={{ height: 1, background: c.line, margin: '4px 0' }} />
+              <span>Sign in</span>
+              <button style={{
+                background: accent, color: readableOn(accent), border: 0,
+                padding: '14px 22px', fontWeight: 700, fontSize: 14, borderRadius: 999,
+                fontFamily: 'inherit', cursor: 'pointer'
+              }}>Start free trial →</button>
+            </div>
+          }
+        </header>
+      );
+    }
+
+    function Wordmark({ accent, ink, display }) {
+      const url = 'uploads/instruct-logo.png';
+      return (
+        <div style={{
+          width: 122, height: 28,
+          background: ink,
+          WebkitMaskImage: `url(${url})`,
+          maskImage: `url(${url})`,
+          WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'left center', maskPosition: 'left center',
+          WebkitMaskSize: 'contain', maskSize: 'contain'
+        }} />
+      );
+    }
+
+    // ─── HERO ────────────────────────────────────────────────────────────────
+    function HeroA({ t, c, accent, accentInk, display, mono, sectionPx, dens, isMobile }) {
+      return (
+        <section style={{
+          padding: isMobile ?
+            `${Math.round(48 * dens)}px ${sectionPx}px ${Math.round(64 * dens)}px` :
+            `${Math.round(72 * dens)}px ${sectionPx}px ${Math.round(96 * dens)}px`,
+          borderBottom: `1px solid ${c.line}`,
+          position: 'relative', overflow: 'hidden'
+        }}>
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, opacity: 0.4,
+            backgroundImage: `linear-gradient(${c.line} 1px, transparent 1px), linear-gradient(90deg, ${c.line} 1px, transparent 1px)`,
+            backgroundSize: '64px 64px', maskImage: 'radial-gradient(ellipse at 80% 30%, #000 0%, transparent 70%)'
+          }} />
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            backgroundImage: `radial-gradient(ellipse at ${isMobile ? '50% 90%' : '78% 55%'}, ${hexA(accent, 0.22)} 0%, transparent 60%)`
+          }} />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1.15fr 1fr',
+            gap: isMobile ? 40 : 64,
+            alignItems: 'center', position: 'relative'
+          }}>
+            <div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 6px',
+                borderRadius: 999, border: `1px solid ${c.line2}`, fontFamily: mono,
+                fontSize: 11, letterSpacing: 0.06, textTransform: 'uppercase', color: c.ink2, marginBottom: isMobile ? 20 : 28
+              }}>
+                <span style={{ width: 18, height: 18, background: accent, borderRadius: 999, color: accentInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>★</span>
+                {t.heroEyebrow}
+              </div>
+              <h1 style={{
+                fontFamily: display, fontWeight: 800,
+                fontSize: isMobile ? 48 : 96, lineHeight: 0.92,
+                letterSpacing: -0.04, margin: 0, color: c.ink
+              }}>
+                {t.heroHeadline}
+              </h1>
+              <p style={{
+                fontSize: isMobile ? 16 : 19, lineHeight: 1.5, color: c.ink2,
+                maxWidth: 520, marginTop: isMobile ? 20 : 28
+              }}>{t.heroSubhead}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: isMobile ? 28 : 36 }}>
+                <button style={{
+                  background: accent, color: accentInk, border: 0, padding: '14px 22px',
+                  fontWeight: 700, fontSize: 14, borderRadius: 999, fontFamily: 'inherit',
+                  letterSpacing: 0.01, cursor: 'pointer'
+                }}>Start 30-day trial →</button>
+                <button style={{
+                  background: 'transparent', color: c.ink, border: `1px solid ${c.line2}`,
+                  padding: '14px 22px', fontWeight: 600, fontSize: 14, borderRadius: 999, fontFamily: 'inherit',
+                  cursor: 'pointer'
+                }}>Watch the 90-second tour</button>
+              </div>
+            </div>
+            <HeroMetricStack c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} isMobile={isMobile} />
+          </div>
+        </section>
+      );
+    }
+
+    function HeroMetricStack({ c, accent, accentInk, display, mono, isMobile }) {
+      return (
+        <div style={{ position: 'relative', minHeight: isMobile ? 420 : 560 }}>
+          <image-slot
+            id="a-hero"
+            shape="rounded"
+            radius="6"
+            placeholder="Hero photo · roll, drill, or coach moment"
+            src="https://loremflickr.com/900/1100/jiujitsu,bjj?lock=701"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              background: c.surface2
+            }}>
+          </image-slot>
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, borderRadius: 6, pointerEvents: 'none',
+            background: 'linear-gradient(140deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.35) 75%)'
+          }} />
+          <div style={{
+            position: 'absolute', top: 18, left: 18, width: 200,
+            background: 'rgba(10,14,20,.78)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,.12)', borderRadius: 6, padding: '14px 16px',
+            color: '#F5F4EE'
+          }}>
+            <div style={{ fontFamily: mono, fontSize: 10, color: 'rgba(245,244,238,.55)', letterSpacing: 0.08, textTransform: 'uppercase' }}>This week</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+              <span style={{ fontFamily: display, fontSize: 36, fontWeight: 800, letterSpacing: -0.02, lineHeight: 0.9 }}>284</span>
+              <span style={{ fontFamily: mono, fontSize: 11, color: accent }}>↑ 12.4%</span>
+            </div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: 'rgba(245,244,238,.55)', marginTop: 4 }}>booked · 22 classes</div>
+          </div>
+          <div style={{
+            position: 'absolute', top: isMobile ? 200 : 240,
+            right: isMobile ? 8 : -16, width: isMobile ? 240 : 280,
+            background: accent, color: accentInk, borderRadius: 6, padding: isMobile ? 18 : 22,
+            boxShadow: '0 24px 60px rgba(0,0,0,.4)', transform: 'rotate(1.5deg)'
+          }}>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 0.08, textTransform: 'uppercase', opacity: 0.7 }}>
+              Up for promotion
+            </div>
+            <div style={{ fontFamily: display, fontSize: 28, fontWeight: 800, marginTop: 6, lineHeight: 1, letterSpacing: -0.02 }}>
+              Marina Souza
+            </div>
+            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.75 }}>Blue belt · 3 stripes · 412 mat-hours</div>
+            <div style={{ marginTop: 16, height: 6, background: 'rgba(0,0,0,.15)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ width: '88%', height: '100%', background: accentInk }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: mono, fontSize: 10, opacity: 0.7 }}>
+              <span>NEXT: PURPLE</span><span>88%</span>
+            </div>
+          </div>
+          <div style={{
+            position: 'absolute', bottom: 18, left: isMobile ? 0 : -8,
+            width: isMobile ? 'calc(100% - 16px)' : 320,
+            background: 'rgba(10,14,20,.85)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,.12)', borderRadius: 6, padding: 18,
+            display: 'flex', alignItems: 'center', gap: 14,
+            color: '#F5F4EE',
+            boxShadow: '0 24px 60px rgba(0,0,0,.4)'
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: 999, background: accent, color: accentInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>$</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>April recurring · charged</div>
+              <div style={{ fontFamily: mono, fontSize: 11, color: 'rgba(245,244,238,.55)', marginTop: 2 }}>196 / 198 members · $24,408</div>
+            </div>
+            <span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(245,244,238,.55)' }}>02:14</span>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── SHARED SECTION ATOMS ────────────────────────────────────────────────
+    function SectionHead({ c, display, mono, accent, eyebrow, title, body, isMobile }) {
+      return (
+        <div style={{ maxWidth: 760 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: mono, fontSize: 11, color: accent, letterSpacing: 0.1, textTransform: 'uppercase', marginBottom: isMobile ? 18 : 24 }}>
+            <span style={{ width: 24, height: 1, background: accent }} />
+            {eyebrow}
+          </div>
+          <h2 style={{
+            fontFamily: display, fontWeight: 800,
+            fontSize: isMobile ? 40 : 64, lineHeight: 0.95,
+            letterSpacing: -0.03, margin: 0, color: c.ink
+          }}>{title}</h2>
+          <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.55, color: c.ink2, marginTop: isMobile ? 18 : 24, maxWidth: 620 }}>{body}</p>
+        </div>
+      );
+    }
+
+    function FeatureBullets({ c, mono, accent, items }) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: c.line }}>
+          {items.map(([h, p], i) =>
+            <div key={i} style={{ background: c.bg, padding: '22px 0', display: 'grid', gridTemplateColumns: '24px 1fr', gap: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                <div style={{ width: 6, height: 6, background: accent, borderRadius: 999 }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 600, color: c.ink, letterSpacing: -0.01 }}>{h}</div>
+                <div style={{ fontSize: 14, color: c.ink2, marginTop: 6, lineHeight: 1.55, maxWidth: 460 }}>{p}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Stat({ c, mono, display, label, value }) {
+      return (
+        <div style={{ background: c.surface2, border: `1px solid ${c.line}`, borderRadius: 4, padding: '10px 12px' }}>
+          <div style={{ fontFamily: mono, fontSize: 9, color: c.ink3, letterSpacing: 0.1 }}>{label}</div>
+          <div style={{ fontFamily: display, fontSize: 22, fontWeight: 700, letterSpacing: -0.01, marginTop: 4 }}>{value}</div>
+        </div>
+      );
+    }
+
+    // ─── FEATURE 1 · MEMBERSHIP ──────────────────────────────────────────────
+    function FeatureMembers({ c, accent, accentInk, display, mono, sectionPx, dens, isMobile }) {
+      return (
+        <section id="membership" style={{ padding: `${Math.round((isMobile ? 80 : 120) * dens)}px ${sectionPx}px`, borderBottom: `1px solid ${c.line}` }}>
+          <SectionHead
+            c={c} display={display} mono={mono} accent={accent} isMobile={isMobile}
+            eyebrow="01 — Membership"
+            title={<>Every member's journey,<br />from day one.</>}
+            body="Attendance, milestones, progression, competitions — Instruct keeps the full record of every member, ready to celebrate the moment they earn it." />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1.05fr 1fr',
+            gap: isMobile ? 32 : 56,
+            marginTop: isMobile ? 40 : 64, alignItems: 'start'
+          }}>
+            <MemberCardA c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} />
+            <div>
+              <FeatureBullets c={c} mono={mono} accent={accent} items={[
+                ['Levels & review dates', "Every member sits on a progression track with a review date — belts, stripes, or any scheme you run. The system flags who's due so promotions don't get missed."],
+                ['Training-hour ledger', 'Every booking counts toward a tracked total. See who\'s ready before they ask.'],
+                ['Family accounts', 'One guardian, multiple dependants. Parent-paid memberships and kids\' bookings live under a single account.'],
+                ['Promotion moments', "Schedule promotions, send invitations, and capture the moment in the member's profile forever."]
+              ]} />
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function MemberCardA({ c, accent, accentInk, display, mono }) {
+      const beltRow = (color, stripes, label, hours, current) =>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '110px 1fr auto', gap: 16, padding: '14px 0',
+          borderBottom: `1px solid ${c.line}`, alignItems: 'center',
+          opacity: current ? 1 : 0.55
+        }}>
+          <Belt color={color} stripes={stripes} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: c.ink3, marginTop: 1 }}>{hours}</div>
+          </div>
+          {current ?
+            <span style={{ fontFamily: mono, fontSize: 10, color: accentInk, background: accent, padding: '3px 8px', borderRadius: 999, letterSpacing: 0.06 }}>CURRENT</span> :
+            <span style={{ fontFamily: mono, fontSize: 10, color: c.ink3 }}>{stripes}/4</span>
+          }
+        </div>;
+
+      return (
+        <div style={{ background: c.surface, border: `1px solid ${c.line}`, borderRadius: 6, padding: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <image-slot id="a-member-marina" shape="circle" placeholder="Member portrait"
+              src="https://loremflickr.com/240/240/jiujitsu,portrait?lock=210"
+              style={{ width: 56, height: 56, flex: '0 0 auto', background: c.surface2 }}></image-slot>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: display, fontSize: 22, fontWeight: 700, letterSpacing: -0.01 }}>Marina Souza</div>
+              <div style={{ fontFamily: mono, fontSize: 11, color: c.ink3, marginTop: 2 }}>MEMBER #0148 · JOINED 2021</div>
+            </div>
+            <div style={{ width: 8, height: 8, borderRadius: 999, background: accent }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+            <Stat c={c} mono={mono} display={display} label="MAT HOURS" value="412" />
+            <Stat c={c} mono={mono} display={display} label="STREAK" value="14d" />
+            <Stat c={c} mono={mono} display={display} label="COMPS" value="6 · 2W" />
+          </div>
+          <div style={{ fontFamily: mono, fontSize: 10, color: c.ink3, letterSpacing: 0.08, marginBottom: 8 }}>BELT JOURNEY</div>
+          {beltRow('#FFFFFF', 4, 'White belt · graduated', 'Sep 2021 → Mar 2022 · 88h')}
+          {beltRow('#1E5BC6', 3, 'Blue belt · 3 stripes', '412h on the mat', true)}
+          {beltRow('#5C2E91', 0, 'Purple belt', 'Estimated Sep 2026')}
+          {beltRow('#7A3E1F', 0, 'Brown belt', '—')}
+          {beltRow('#0A0A0A', 0, 'Black belt', '—')}
+        </div>
+      );
+    }
+
+    // ─── FEATURE 2 · SCHEDULING ──────────────────────────────────────────────
+    function FeatureSchedule({ c, accent, accentInk, display, mono, sectionPx, dens, isMobile }) {
+      return (
+        <section id="scheduling" style={{ padding: `${Math.round((isMobile ? 80 : 120) * dens)}px ${sectionPx}px`, borderBottom: `1px solid ${c.line}`, background: c.surface }}>
+          <SectionHead
+            c={c} display={display} mono={mono} accent={accent} isMobile={isMobile}
+            eyebrow="02 — Scheduling"
+            title={<>Bookings<br />that actually book.</>}
+            body="Members reserve their spot in seconds from any phone. Coaches see exactly who's on the mats — before warm-ups start." />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1.1fr',
+            gap: isMobile ? 32 : 56,
+            marginTop: isMobile ? 40 : 64, alignItems: 'start'
+          }}>
+            <FeatureBullets c={c} mono={mono} accent={accent} items={[
+              ['Class capacity', "Cap each session so coaches walk into a room they can actually run. Members see remaining spots before they book."],
+              ['Attendance, tracked', 'Confirmed, attended, no-show — every booking carries a status so coaches and members know exactly where they stand.'],
+              ['Recurring schedule', 'Set the academy timetable once. Holidays, seminars and one-off subs slot in cleanly.'],
+              ['Self-serve signup', 'New members find your schedule, sign up, and book their first session without ever needing the front desk.']
+            ]} />
+            <ScheduleGridA c={c} accent={accent} accentInk={accentInk} mono={mono} display={display} />
+          </div>
+        </section>
+      );
+    }
+
+    function ScheduleGridA({ c, accent, accentInk, mono, display }) {
+      const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+      const cells = [
+        [0, 0, 2, 'Fundamentals', '06:00 · Coach R', 'a'],
+        [1, 0, 2, 'Fundamentals', '06:00 · Coach R', 'a'],
+        [2, 0, 2, 'No-gi', '06:00 · Coach K', 'b'],
+        [3, 0, 2, 'Fundamentals', '06:00 · Coach R', 'a'],
+        [4, 0, 2, 'Open mat', '06:00 · —', 'c'],
+        [5, 0, 4, 'Comp class', '09:00 · Coach K', 'd'],
+        [0, 3, 2, 'Kids · 7-12', '16:30 · Coach M', 'e'],
+        [2, 3, 2, 'Kids · 7-12', '16:30 · Coach M', 'e'],
+        [4, 3, 2, 'Kids · 7-12', '16:30 · Coach M', 'e'],
+        [0, 5, 3, 'All levels', '18:30 · Coach R', 'a'],
+        [1, 5, 3, 'No-gi', '18:30 · Coach K', 'b'],
+        [2, 5, 3, 'All levels', '18:30 · Coach R', 'a'],
+        [3, 5, 3, 'No-gi', '18:30 · Coach K', 'b'],
+        [4, 5, 2, 'Open mat', '18:30 · —', 'c']
+      ];
+
+      const colorFor = (k) => ({
+        a: { bg: c.surface2, fg: c.ink, accent: false },
+        b: { bg: hexA(accent, 0.15), fg: c.ink, accent: false },
+        c: { bg: 'transparent', fg: c.ink2, accent: false },
+        d: { bg: accent, fg: accentInk, accent: true },
+        e: { bg: c.surface2, fg: c.ink, accent: false }
+      })[k];
+
+      const rowH = 38;
+      const rows = 8;
+      return (
+        <div style={{ background: c.bg, border: `1px solid ${c.line}`, borderRadius: 6, padding: 22, overflowX: 'auto' }}>
+          <div style={{ minWidth: 480 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontFamily: mono, fontSize: 10, color: c.ink3, letterSpacing: 0.1 }}>SCHEDULE · APR 28 — MAY 4</div>
+                <div style={{ fontFamily: display, fontSize: 22, fontWeight: 700, marginTop: 2, letterSpacing: -0.01 }}>This week's mats</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, fontFamily: mono, fontSize: 10, color: c.ink3 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><i style={{ width: 8, height: 8, background: c.surface2 }} />GI</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><i style={{ width: 8, height: 8, background: hexA(accent, 0.6) }} />NO-GI</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><i style={{ width: 8, height: 8, background: accent }} />COMP</span>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '40px repeat(6, 1fr)', columnGap: 4 }}>
+              <div />
+              {days.map((d) => <div key={d} style={{ fontFamily: mono, fontSize: 10, color: c.ink3, textAlign: 'center', paddingBottom: 8 }}>{d}</div>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '40px repeat(6, 1fr)', columnGap: 4, position: 'relative' }}>
+              <div style={{ display: 'grid', gridTemplateRows: `repeat(${rows}, ${rowH}px)` }}>
+                {['06', '12', '16', '17', '18', '19', '20', '21'].map((h) =>
+                  <div key={h} style={{ fontFamily: mono, fontSize: 9, color: c.ink3, textAlign: 'right', paddingRight: 8, lineHeight: 1 }}>{h}:00</div>
+                )}
+              </div>
+              {days.map((_, di) =>
+                <div key={di} style={{ position: 'relative', height: rows * rowH, borderLeft: `1px solid ${c.line}` }}>
+                  {Array.from({ length: rows }).map((_, ri) =>
+                    <div key={ri} style={{ position: 'absolute', left: 0, right: 0, top: ri * rowH, height: rowH, borderBottom: `1px solid ${c.line}` }} />
+                  )}
+                  {cells.filter((x) => x[0] === di).map((x, i) => {
+                    const [, start, span, label, sub, kind] = x;
+                    const tk = colorFor(kind);
+                    return (
+                      <div key={i} style={{
+                        position: 'absolute', left: 2, right: 2,
+                        top: start * rowH + 2, height: span * rowH - 4,
+                        background: tk.bg, color: tk.fg,
+                        border: kind === 'c' ? `1px dashed ${c.line2}` : 'none',
+                        borderRadius: 3, padding: '8px 10px', overflow: 'hidden',
+                        boxShadow: tk.accent ? '0 6px 18px rgba(0,0,0,.3)' : 'none'
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: -0.01, lineHeight: 1.15 }}>{label}</div>
+                        <div style={{ fontFamily: mono, fontSize: 9, opacity: 0.7, marginTop: 3 }}>{sub}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── FEATURE 3 · BILLING ─────────────────────────────────────────────────
+    function FeaturePayments({ c, accent, accentInk, display, mono, sectionPx, dens, isMobile }) {
+      return (
+        <section id="billing" style={{ padding: `${Math.round((isMobile ? 80 : 120) * dens)}px ${sectionPx}px`, borderBottom: `1px solid ${c.line}` }}>
+          <SectionHead
+            c={c} display={display} mono={mono} accent={accent} isMobile={isMobile}
+            eyebrow="03 — Billing"
+            title={<>Memberships,<br />on autopilot.</>}
+            body="Auto-charge recurring plans, retry failed cards on a smart schedule, and sell drop-ins and seminars from a single dashboard. Your billing runs itself." />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1.15fr 1fr',
+            gap: isMobile ? 32 : 56,
+            marginTop: isMobile ? 40 : 64, alignItems: 'start'
+          }}>
+            <PaymentsDashA c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} />
+            <FeatureBullets c={c} mono={mono} accent={accent} items={[
+              ['Recurring memberships · Stripe', 'Monthly, quarterly or annual plans charge themselves through Stripe. Hold accounts when members travel without losing their seat.'],
+              ['Smart card recovery', 'Failed payments retry on a schedule that actually works — and members get a friendly nudge to update their card.'],
+              ['Pay-as-you-go sessions', 'One-off session payments alongside recurring plans — all through Stripe, all in one dashboard.'],
+              ['Admin oversight', 'Booking history, payment status, attendance and announcements — the whole room from one screen.'],
+              ['Roles · owner, instructor, standard, guest', 'Four permission levels out of the box. Owners run the show, instructors manage their mats, members book, guests preview before they sign.']
+            ]} />
+          </div>
+        </section>
+      );
+    }
+
+    function PaymentsDashA({ c, accent, accentInk, display, mono }) {
+      const months = [38, 41, 44, 49, 52, 58, 61, 67, 71, 73, 78, 82];
+      const max = Math.max(...months);
+      const rows = [
+        ['MEMBERSHIP', 'Adult unlimited', '198 active', '$24,408', 'paid'],
+        ['MEMBERSHIP', 'Kids 7-12', '47 active', '$4,135', 'paid'],
+        ['DROP-IN', 'Visitor pass · 5', 'Apr 27', '$185', 'paid'],
+        ['SEMINAR', 'Lapel guard · K', '34 sold', '$2,720', 'paid'],
+        ['MEMBERSHIP', 'Recovery: 2 cards', 'Auto retry', '—', 'pending']
+      ];
+
+      return (
+        <div style={{ background: c.surface, border: `1px solid ${c.line}`, borderRadius: 6, padding: 24, overflowX: 'auto' }}>
+          <div style={{ minWidth: 460 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div>
+                <div style={{ fontFamily: mono, fontSize: 10, color: c.ink3, letterSpacing: 0.1 }}>RECURRING REVENUE · ROLLING 12 MO</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 4 }}>
+                  <span style={{ fontFamily: display, fontSize: 44, fontWeight: 800, letterSpacing: -0.02, lineHeight: 1 }}>$28,543</span>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: accent }}>↑ 18.2% YoY</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 4, fontFamily: mono, fontSize: 10, color: c.ink3 }}>
+                {['1M', '3M', '6M', '12M', 'ALL'].map((p, i) =>
+                  <span key={p} style={{ padding: '4px 8px', borderRadius: 4, background: i === 3 ? c.surface2 : 'transparent', color: i === 3 ? c.ink : c.ink3, border: i === 3 ? `1px solid ${c.line}` : 'none' }}>{p}</span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120, marginBottom: 24 }}>
+              {months.map((v, i) =>
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 4 }}>
+                  <div style={{ height: `${v / max * 100}%`, background: i === 11 ? accent : c.line2, borderRadius: 1 }} />
+                </div>
+              )}
+            </div>
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 110px 90px 70px', gap: 12, fontFamily: mono, fontSize: 9, color: c.ink3, letterSpacing: 0.1, padding: '0 0 10px', borderBottom: `1px solid ${c.line}` }}>
+                <span>TYPE</span><span>PRODUCT</span><span>VOLUME</span><span>NET</span><span>STATUS</span>
+              </div>
+              {rows.map((r, i) =>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 110px 90px 70px', gap: 12, padding: '14px 0', borderBottom: `1px solid ${c.line}`, fontSize: 13, alignItems: 'center' }}>
+                  <span style={{ fontFamily: mono, fontSize: 10, color: c.ink3, letterSpacing: 0.06 }}>{r[0]}</span>
+                  <span style={{ color: c.ink, fontWeight: 500 }}>{r[1]}</span>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: c.ink2 }}>{r[2]}</span>
+                  <span style={{ fontFamily: mono, fontSize: 12, color: c.ink, fontWeight: 600 }}>{r[3]}</span>
+                  <span style={{
+                    fontFamily: mono, fontSize: 9, letterSpacing: 0.06, padding: '3px 8px', borderRadius: 999,
+                    background: r[4] === 'paid' ? hexA(accent, 0.18) : c.surface2,
+                    color: r[4] === 'paid' ? accent : c.ink2,
+                    textAlign: 'center', textTransform: 'uppercase'
+                  }}>{r[4]}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── TESTIMONIALS ─────────────────────────────────────────────────────────
+    function TestimonialsA({ c, accent, display, mono, sectionPx, isMobile }) {
+      const quotes = [
+        {
+          q: 'Cut my admin from twelve hours a week to under one. I get to actually coach again.',
+          name: 'Renan Mello', role: 'Head Coach · Foundry Jiu Jitsu', loc: 'São Paulo'
+        },
+        {
+          q: 'Failed-card recovery alone paid for the whole platform in our first quarter.',
+          name: 'Aly Nakamura', role: 'Owner · Bell Curve BJJ', loc: 'Vancouver'
+        },
+        {
+          q: 'My members track their stripes themselves now. Promotions feel earned, not surprise gifts.',
+          name: 'Theo Park', role: 'Black Belt · North Coast', loc: 'Brighton'
+        }
+      ];
+
+      return (
+        <section style={{ padding: `${isMobile ? 80 : 120}px ${sectionPx}px`, borderBottom: `1px solid ${c.line}`, background: c.surface }}>
+          <div style={{
+            display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'baseline',
+            justifyContent: 'space-between',
+            gap: isMobile ? 14 : 32,
+            marginBottom: isMobile ? 36 : 56
+          }}>
+            <h3 style={{ fontFamily: display, fontSize: isMobile ? 36 : 48, fontWeight: 800, letterSpacing: -0.03, margin: 0, lineHeight: 1, color: c.ink }}>
+              From the people<br />on the mats.
+            </h3>
+            <div style={{ fontFamily: mono, fontSize: 11, color: c.ink3, letterSpacing: 0.1 }}></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 24 }}>
+            {quotes.map((q, i) =>
+              <div key={i} style={{ background: c.bg, border: `1px solid ${c.line}`, borderRadius: 6, padding: 28, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+                <div style={{ fontFamily: display, fontSize: 80, color: accent, lineHeight: 0.6, marginBottom: 12, fontWeight: 800 }}>"</div>
+                <p style={{ fontSize: 18, lineHeight: 1.45, color: c.ink, fontWeight: 500, letterSpacing: -0.01, margin: 0 }}>{q.q}</p>
+                <div style={{ flex: 1 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
+                  <image-slot id={`a-quote-${i}`} shape="circle" placeholder="Avatar"
+                    src={`https://loremflickr.com/160/160/jiujitsu,portrait?lock=${300 + i}`}
+                    style={{ width: 38, height: 38, flex: '0 0 auto', background: c.surface2 }}></image-slot>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{q.name}</div>
+                    <div style={{ fontFamily: mono, fontSize: 10, color: c.ink3, marginTop: 1, letterSpacing: 0.04 }}>{q.role.toUpperCase()} · {q.loc.toUpperCase()}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    // ─── PRICING ─────────────────────────────────────────────────────────────
+    function PricingA({ c, accent, accentInk, display, mono, sectionPx, dens, isMobile }) {
+      const tiers = [
+        {
+          name: 'Solo', price: 19, period: '/ mo', sub: 'Independent instructors',
+          bullets: ['Up to 30 members', 'Bookings + payments', 'Belt + stripe tracking', 'Email support'],
+          cta: 'Start solo', featured: false
+        },
+        {
+          name: 'Studio', price: 29, period: '/ mo', sub: 'Single-academy operators',
+          bullets: ['Unlimited members', 'Bookings + payments', 'Drop-ins & seminars', 'Belt + stripe tracking', 'Email support'],
+          cta: 'Start Studio', featured: true
+        },
+        {
+          name: 'Studio Annual', price: 310, period: '/ yr', sub: 'Best value · over one month free',
+          bullets: ['Unlimited members', 'Bookings + payments', 'Drop-ins & seminars', 'Belt + stripe tracking', 'Email support'],
+          cta: 'Go annual', featured: false
+        }
+      ];
+
+      return (
+        <section id="pricing" style={{ padding: `${Math.round((isMobile ? 80 : 120) * dens)}px ${sectionPx}px`, borderBottom: `1px solid ${c.line}` }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 64 }}>
+            <div style={{ fontFamily: mono, fontSize: 11, color: accent, letterSpacing: 0.12, textTransform: 'uppercase', marginBottom: 16 }}>Pricing · billed monthly</div>
+            <h3 style={{ fontFamily: display, fontSize: isMobile ? 40 : 64, fontWeight: 800, letterSpacing: -0.03, margin: 0, lineHeight: 0.95 }}>
+              One flat fee. No per-seat math.
+            </h3>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16, alignItems: 'stretch' }}>
+            {tiers.map((tier, i) => {
+              const featured = tier.featured;
+              return (
+                <div key={i} style={{
+                  background: featured ? accent : c.surface,
+                  color: featured ? accentInk : c.ink,
+                  border: featured ? 'none' : `1px solid ${c.line}`,
+                  borderRadius: 6, padding: 32, position: 'relative',
+                  display: 'flex', flexDirection: 'column'
+                }}>
+                  {featured &&
+                    <div style={{ position: 'absolute', top: -12, left: 24, background: c.bg, color: accent, padding: '4px 10px', fontFamily: mono, fontSize: 9, letterSpacing: 0.12, borderRadius: 999, border: `1px solid ${accent}` }}>
+                      MOST CHOSEN
+                    </div>
+                  }
+                  <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: 0.1, opacity: 0.7, textTransform: 'uppercase' }}>{tier.name}</div>
+                  <div style={{ fontSize: 13, marginTop: 4, opacity: 0.7 }}>{tier.sub}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 24 }}>
+                    <span style={{ fontFamily: display, fontSize: 64, fontWeight: 800, letterSpacing: -0.03, lineHeight: 0.9 }}>£{tier.price}</span>
+                    <span style={{ fontFamily: mono, fontSize: 12, opacity: 0.65 }}>{tier.period}</span>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '32px 0 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {tier.bullets.map((b, j) =>
+                      <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14 }}>
+                        <span style={{ flex: '0 0 auto', width: 14, height: 14, marginTop: 3, borderRadius: 999, border: featured ? `1.5px solid ${accentInk}` : `1.5px solid ${c.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ width: 6, height: 6, background: featured ? accentInk : c.ink, borderRadius: 999 }} />
+                        </span>
+                        <span style={{ opacity: 0.92 }}>{b}</span>
+                      </li>
+                    )}
+                  </ul>
+                  <div style={{ flex: 1 }} />
+                  <button style={{
+                    marginTop: 32, padding: '14px 18px', borderRadius: 999, border: 0, cursor: 'pointer',
+                    fontWeight: 700, fontSize: 14, fontFamily: 'inherit',
+                    background: featured ? c.bg : c.ink, color: featured ? accent : c.bg
+                  }}>{tier.cta} →</button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      );
+    }
+
+    // ─── CTA ─────────────────────────────────────────────────────────────────
+    function CTAa({ c, accent, accentInk, display, mono, isMobile, sectionPx }) {
+      return (
+        <section id="contact" style={{ padding: isMobile ? `80px ${sectionPx}px` : '120px 80px', position: 'relative', overflow: 'hidden' }}>
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `radial-gradient(circle at 50% 60%, ${hexA(accent, 0.16)} 0%, transparent 60%)`
+          }} />
+          <div style={{ position: 'relative', textAlign: 'center', maxWidth: 820, margin: '0 auto' }}>
+            <h2 style={{ fontFamily: display, fontSize: isMobile ? 52 : 96, fontWeight: 800, letterSpacing: -0.04, lineHeight: 0.92, margin: 0, color: c.ink }}>
+              The mats are waiting.
+            </h2>
+            <p style={{ fontSize: isMobile ? 16 : 19, color: c.ink2, marginTop: isMobile ? 18 : 24, lineHeight: 1.5 }}>
+              Free for 30 days. We migrate your members, your schedule, and your billing for you — no spreadsheets harmed in the process.
+            </p>
+            <div style={{ marginTop: isMobile ? 28 : 36, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+              <button style={{ background: accent, color: accentInk, border: 0, padding: '16px 26px', fontWeight: 700, fontSize: 15, borderRadius: 999, fontFamily: 'inherit', cursor: 'pointer' }}>
+                Start your trial →
+              </button>
+              <button style={{ background: 'transparent', color: c.ink, border: `1px solid ${c.line2}`, padding: '16px 26px', fontWeight: 600, fontSize: 15, borderRadius: 999, fontFamily: 'inherit', cursor: 'pointer' }}>
+                Book a demo
+              </button>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── FOOTER ──────────────────────────────────────────────────────────────
+    function FooterA({ c, mono, display, isMobile, sectionPx }) {
+      return (
+        <footer style={{
+          padding: isMobile ? `28px ${sectionPx}px` : '40px 80px',
+          borderTop: `1px solid ${c.line}`,
+          display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          justifyContent: 'space-between',
+          gap: isMobile ? 20 : 24,
+          fontFamily: mono, fontSize: 11, color: c.ink3, letterSpacing: 0.04
+        }}>
+          <div style={{
+            width: 110, height: 24,
+            background: c.ink,
+            WebkitMaskImage: "url('uploads/instruct-logo.png')",
+            maskImage: "url('uploads/instruct-logo.png')",
+            WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+            WebkitMaskSize: 'contain', maskSize: 'contain',
+            WebkitMaskPosition: 'left center', maskPosition: 'left center'
+          }} />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '10px 18px' : 28 }}>
+            <a href="#membership" style={{ color: 'inherit', textDecoration: 'none' }}>MEMBERSHIP</a>
+            <a href="#scheduling" style={{ color: 'inherit', textDecoration: 'none' }}>SCHEDULING</a>
+            <a href="#billing" style={{ color: 'inherit', textDecoration: 'none' }}>BILLING</a>
+            <a href="#pricing" style={{ color: 'inherit', textDecoration: 'none' }}>PRICING</a>
+            <a href="#contact" style={{ color: 'inherit', textDecoration: 'none' }}>CONTACT</a>
+          </div>
+          <span>© 2026 Instruct</span>
+        </footer>
+      );
+    }
+
+    // ─── APP ─────────────────────────────────────────────────────────────────
+    function App() {
+      return <DirectionA t={t} />;
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
