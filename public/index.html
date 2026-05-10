@@ -403,9 +403,9 @@
             <div>
               <FeatureBullets c={c} mono={mono} accent={accent} items={[
                 ['Levels & review dates', "Every member sits on a progression track with a review date — belts, stripes, or any scheme you run. The system flags who's due so promotions don't get missed."],
-                ['Training-hour ledger', 'Every booking counts toward a tracked total. See who\'s ready before they ask.'],
                 ['Family accounts', 'One guardian, multiple dependants. Parent-paid memberships and kids\' bookings live under a single account.'],
-                ['Promotion moments', "Schedule promotions, send invitations, and capture the moment in the member's profile forever."]
+                ['Promotion moments', "Schedule promotions, send invitations, and capture the moment in the member's profile forever."],
+                ['Roles · owner, instructor, standard, guest', 'Four permission levels out of the box. Owners run the show, instructors manage their mats, members book, guests preview before they sign.']
               ]} />
             </div>
           </div>
@@ -576,7 +576,7 @@
             c={c} display={display} mono={mono} accent={accent} isMobile={isMobile}
             eyebrow="03 — Billing"
             title={<>Memberships,<br />on autopilot.</>}
-            body="Auto-charge recurring plans, retry failed cards on a smart schedule, and sell drop-ins and seminars from a single dashboard. Your billing runs itself." />
+            body="Auto-charge monthly, quarterly or annual memberships, and sell one-off sessions for drop-ins and seminars — all handled in-app through Stripe. Your billing runs itself." />
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : '1.15fr 1fr',
@@ -586,10 +586,8 @@
             <PaymentsDashA c={c} accent={accent} accentInk={accentInk} display={display} mono={mono} />
             <FeatureBullets c={c} mono={mono} accent={accent} items={[
               ['Recurring memberships · Stripe', 'Monthly, quarterly or annual plans charge themselves through Stripe. Hold accounts when members travel without losing their seat.'],
-              ['Smart card recovery', 'Failed payments retry on a schedule that actually works — and members get a friendly nudge to update their card.'],
               ['Pay-as-you-go sessions', 'One-off session payments alongside recurring plans — all through Stripe, all in one dashboard.'],
-              ['Admin oversight', 'Booking history, payment status, attendance and announcements — the whole room from one screen.'],
-              ['Roles · owner, instructor, standard, guest', 'Four permission levels out of the box. Owners run the show, instructors manage their mats, members book, guests preview before they sign.']
+              ['Admin oversight', 'Booking history, payment status, attendance and announcements — the whole room from one screen.']
             ]} />
           </div>
         </section>
@@ -681,15 +679,21 @@
             gap: isMobile ? 14 : 32,
             marginBottom: isMobile ? 36 : 56
           }}>
-            <h3 style={{ fontFamily: display, fontSize: isMobile ? 36 : 48, fontWeight: 800, letterSpacing: -0.03, margin: 0, lineHeight: 1, color: c.ink }}>
-              From the people<br />on the mats.
-            </h3>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: mono, fontSize: 11, color: accent, letterSpacing: 0.1, textTransform: 'uppercase', marginBottom: isMobile ? 14 : 18 }}>
+                <span style={{ width: 24, height: 1, background: accent }} />
+                04 — What people say
+              </div>
+              <h3 style={{ fontFamily: display, fontSize: isMobile ? 36 : 48, fontWeight: 800, letterSpacing: -0.03, margin: 0, lineHeight: 1, color: c.ink }}>
+                From the people<br />on the mats.
+              </h3>
+            </div>
             <div style={{ fontFamily: mono, fontSize: 11, color: c.ink3, letterSpacing: 0.1 }}></div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 24 }}>
             {quotes.map((q, i) =>
               <div key={i} style={{ background: c.bg, border: `1px solid ${c.line}`, borderRadius: 6, padding: 28, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
-                <div style={{ fontFamily: display, fontSize: 80, color: accent, lineHeight: 0.6, marginBottom: 12, fontWeight: 800 }}>"</div>
+                <div style={{ fontFamily: display, fontSize: 110, color: accent, lineHeight: 0.7, marginBottom: 4, fontWeight: 800 }}>"</div>
                 <p style={{ fontSize: 18, lineHeight: 1.45, color: c.ink, fontWeight: 500, letterSpacing: -0.01, margin: 0 }}>{q.q}</p>
                 <div style={{ flex: 1 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
@@ -731,7 +735,10 @@
       return (
         <section id="pricing" style={{ padding: `${Math.round((isMobile ? 80 : 120) * dens)}px ${sectionPx}px`, borderBottom: `1px solid ${c.line}` }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 64 }}>
-            <div style={{ fontFamily: mono, fontSize: 11, color: accent, letterSpacing: 0.12, textTransform: 'uppercase', marginBottom: 16 }}>Pricing · billed monthly</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: mono, fontSize: 11, color: accent, letterSpacing: 0.1, textTransform: 'uppercase', marginBottom: 16 }}>
+              <span style={{ width: 24, height: 1, background: accent }} />
+              05 — Pricing
+            </div>
             <h3 style={{ fontFamily: display, fontSize: isMobile ? 40 : 64, fontWeight: 800, letterSpacing: -0.03, margin: 0, lineHeight: 0.95 }}>
               One flat fee. No per-seat math.
             </h3>
@@ -791,6 +798,10 @@
             backgroundImage: `radial-gradient(circle at 50% 60%, ${hexA(accent, 0.16)} 0%, transparent 60%)`
           }} />
           <div style={{ position: 'relative', textAlign: 'center', maxWidth: 820, margin: '0 auto' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: mono, fontSize: 11, color: accent, letterSpacing: 0.1, textTransform: 'uppercase', marginBottom: isMobile ? 18 : 24 }}>
+              <span style={{ width: 24, height: 1, background: accent }} />
+              06 — Get started
+            </div>
             <h2 style={{ fontFamily: display, fontSize: isMobile ? 52 : 96, fontWeight: 800, letterSpacing: -0.04, lineHeight: 0.92, margin: 0, color: c.ink }}>
               The mats are waiting.
             </h2>
